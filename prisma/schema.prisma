@@ -1,0 +1,672 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ============================================================================
+// AUTH & RBAC
+// ============================================================================
+
+model User {
+  id                    String    @id @default(cuid())
+  email                 String    @unique
+  username              String    @unique
+  passwordHash          String
+  fullName              String?
+  avatar                String?
+  lastLogin             DateTime?
+  loginAttempts         Int       @default(0)
+  lockedUntil           DateTime?
+  enabled               Boolean   @default(true)
+  emailVerified         DateTime?
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+
+  roles                 UserRole[]
+  sessions              Session[]
+  auditLogs             AuditLog[]
+  alertAcknowledgments  Alert[]   @relation("AcknowledgedBy")
+
+  @@index([email])
+  @@index([username])
+  @@index([enabled])
+}
+
+model Role {
+  id                    String    @id @default(cuid())
+  name                  String    @unique
+  description           String?
+  permissions           Permission[]
+  userRoles             UserRole[]
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+
+  @@index([name])
+}
+
+enum RoleType {
+  SUPER_ADMIN
+  ADMIN
+  OPERATOR
+  ANALYST
+  VIEWER
+}
+
+model UserRole {
+  id                    String    @id @default(cuid())
+  userId                String
+  roleId                String
+  user                  User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role                  Role      @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  createdAt             DateTime  @default(now())
+
+  @@unique([userId, roleId])
+  @@index([userId])
+  @@index([roleId])
+}
+
+model Permission {
+  id                    String    @id @default(cuid())
+  name                  String    @unique
+  description           String?
+  resource              String
+  action                String
+  roles                 Role[]
+  createdAt             DateTime  @default(now())
+
+  @@index([resource])
+  @@index([action])
+  @@unique([resource, action])
+}
+
+model Session {
+  id                    String    @id @default(cuid())
+  userId                String
+  user                  User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  token                 String    @unique
+  ipAddress             String?
+  userAgent             String?
+  expiresAt             DateTime
+  createdAt             DateTime  @default(now())
+  revokedAt             DateTime?
+
+  @@index([userId])
+  @@index([expiresAt])
+}
+
+model AuditLog {
+  id                    String    @id @default(cuid())
+  userId                String
+  user                  User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  action                String
+  resource              String
+  resourceId            String?
+  status                String    // SUCCESS, FAILURE
+  details               Json?
+  ipAddress             String?
+  userAgent             String?
+  createdAt             DateTime  @default(now())
+
+  @@index([userId])
+  @@index([action])
+  @@index([resource])
+  @@index([createdAt])
+  @@index([status])
+}
+
+// ============================================================================
+// DEVICE MANAGEMENT (ADB/Mobile)
+// ============================================================================
+
+model Device {
+  id                    String    @id @default(cuid())
+  serialNumber          String    @unique
+  manufacturer          String
+  model                 String
+  androidVersion        String?
+  sdkVersion            String?
+  buildNumber           String?
+  cpuAbi                String?
+  screenDensity         String?
+  batteryLevel          Int?
+  batteryTemperature    Int?
+  storageTotalMB        Int?
+  storageFreeMB         Int?
+  connectionStatus      String    @default("UNKNOWN") // CONNECTED, DISCONNECTED, UNKNOWN
+  lastSeen              DateTime?
+  source                String    @default("ADB")
+  discoveredAt          DateTime  @default(now())
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+
+  events                DeviceEvent[]
+  heartbeats            DeviceHeartbeat[]
+  applications          InstalledApplication[]
+
+  @@index([serialNumber])
+  @@index([connectionStatus])
+  @@index([lastSeen])
+  @@index([source])
+}
+
+model DeviceHeartbeat {
+  id                    String    @id @default(cuid())
+  deviceId              String
+  device                Device    @relation(fields: [deviceId], references: [id], onDelete: Cascade)
+  status                String    // ONLINE, OFFLINE, ERROR
+  batteryLevel          Int?
+  storageFreeMB         Int?
+  timestamp             DateTime  @default(now())
+
+  @@index([deviceId])
+  @@index([timestamp])
+  @@index([status])
+}
+
+model DeviceEvent {
+  id                    String    @id @default(cuid())
+  deviceId              String
+  device                Device    @relation(fields: [deviceId], references: [id], onDelete: Cascade)
+  eventType             String    // CONNECTED, DISCONNECTED, ERROR, COMMAND_EXECUTED
+  details               Json?
+  timestamp             DateTime  @default(now())
+
+  @@index([deviceId])
+  @@index([eventType])
+  @@index([timestamp])
+}
+
+model InstalledApplication {
+  id                    String    @id @default(cuid())
+  deviceId              String
+  device                Device    @relation(fields: [deviceId], references: [id], onDelete: Cascade)
+  packageName           String
+  label                 String?
+  versionName           String?
+  versionCode           String?
+  isSystemApp           Boolean   @default(false)
+  discoveredAt          DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+
+  @@unique([deviceId, packageName])
+  @@index([deviceId])
+  @@index([packageName])
+}
+
+// ============================================================================
+// AGENTS & HEARTBEATS
+// ============================================================================
+
+model Agent {
+  id                    String    @id @default(cuid())
+  agentId               String    @unique
+  name                  String
+  platform              String
+  version               String
+  registrationStatus    String    @default("PENDING") // PENDING, REGISTERED, REVOKED
+  lastHeartbeat         DateTime?
+  ipAddress             String?
+  capabilities          Json?
+  status                String    @default("UNKNOWN") // ONLINE, OFFLINE, ERROR, UNKNOWN
+  lastError             String?
+  registrationToken     String    @unique
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+
+  heartbeats            AgentHeartbeat[]
+  events                AgentEvent[]
+
+  @@index([agentId])
+  @@index([status])
+  @@index([lastHeartbeat])
+  @@index([registrationStatus])
+}
+
+model AgentHeartbeat {
+  id                    String    @id @default(cuid())
+  agentId               String
+  agent                 Agent     @relation(fields: [agentId], references: [id], onDelete: Cascade)
+  status                String    // ONLINE, OFFLINE, DEGRADED, ERROR
+  cpuUsage              Float?
+  memoryUsage           Float?
+  diskUsage             Float?
+  responseTime          Int?
+  timestamp             DateTime  @default(now())
+
+  @@index([agentId])
+  @@index([timestamp])
+  @@index([status])
+}
+
+model AgentEvent {
+  id                    String    @id @default(cuid())
+  agentId               String
+  agent                 Agent     @relation(fields: [agentId], references: [id], onDelete: Cascade)
+  eventType             String    // ONLINE, OFFLINE, ERROR, CAPABILITY_CHANGE
+  message               String?
+  timestamp             DateTime  @default(now())
+
+  @@index([agentId])
+  @@index([eventType])
+  @@index([timestamp])
+}
+
+// ============================================================================
+// NETWORK OPERATIONS
+// ============================================================================
+
+model NetworkSource {
+  id                    String    @id @default(cuid())
+  name                  String
+  type                  String    // GATEWAY, INTERFACE, ROUTER, DNS
+  address               String?
+  enabled               Boolean   @default(true)
+  pollingInterval       Int       @default(30) // seconds
+  lastCheck             DateTime?
+  status                String    @default("UNKNOWN") // CONNECTED, DISCONNECTED, UNKNOWN
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+
+  observations          NetworkObservation[]
+  events                NetworkEvent[]
+
+  @@index([type])
+  @@index([enabled])
+  @@index([status])
+}
+
+model NetworkObservation {
+  id                    String    @id @default(cuid())
+  sourceId              String
+  source                NetworkSource @relation(fields: [sourceId], references: [id], onDelete: Cascade)
+  target                String?
+  measurementType       String    // LATENCY, PACKET_LOSS, BANDWIDTH, DNS_RESOLUTION
+  value                 Float?
+  unit                  String?   // ms, %, Mbps, etc
+  status                String    // SUCCESS, FAILED, TIMEOUT
+  error                 String?
+  timestamp             DateTime  @default(now())
+
+  @@index([sourceId])
+  @@index([measurementType])
+  @@index([timestamp])
+  @@index([status])
+}
+
+model NetworkEvent {
+  id                    String    @id @default(cuid())
+  sourceId              String
+  source                NetworkSource @relation(fields: [sourceId], references: [id], onDelete: Cascade)
+  eventType             String    // CONNECTED, DISCONNECTED, DEGRADED, ERROR
+  details               Json?
+  timestamp             DateTime  @default(now())
+
+  @@index([sourceId])
+  @@index([eventType])
+  @@index([timestamp])
+}
+
+// ============================================================================
+// ROUTER INTEGRATION
+// ============================================================================
+
+model Router {
+  id                    String    @id @default(cuid())
+  name                  String    @unique
+  address               String
+  protocol              String    @default("http") // http, https, ssh
+  apiEndpoint           String?
+  pollingInterval       Int       @default(60) // seconds
+  enabled               Boolean   @default(false)
+  lastCheck             DateTime?
+  status                String    @default("DISCONNECTED") // CONNECTED, DISCONNECTED, AUTH_FAILED, TIMEOUT, UNSUPPORTED
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+
+  credentials           RouterCredential?
+  observations          RouterObservation[]
+  events                RouterEvent[]
+
+  @@index([enabled])
+  @@index([status])
+}
+
+model RouterCredential {
+  id                    String    @id @default(cuid())
+  routerId              String    @unique
+  router                Router    @relation(fields: [routerId], references: [id], onDelete: Cascade)
+  username              String?
+  passwordHash          String?
+  apiKey                String?
+  encryptionKey         String    @default("") // Used for decryption, never shown
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+}
+
+model RouterObservation {
+  id                    String    @id @default(cuid())
+  routerId              String
+  router                Router    @relation(fields: [routerId], references: [id], onDelete: Cascade)
+  metric                String    // UPTIME, CONNECTED_DEVICES, BANDWIDTH_USAGE, CPU, MEMORY
+  value                 String?
+  status                String    // SUCCESS, FAILED, UNAVAILABLE
+  error                 String?
+  timestamp             DateTime  @default(now())
+
+  @@index([routerId])
+  @@index([metric])
+  @@index([timestamp])
+  @@index([status])
+}
+
+model RouterEvent {
+  id                    String    @id @default(cuid())
+  routerId              String
+  router                Router    @relation(fields: [routerId], references: [id], onDelete: Cascade)
+  eventType             String    // CONNECTED, DISCONNECTED, AUTH_FAILED, TIMEOUT, UNSUPPORTED
+  details               Json?
+  timestamp             DateTime  @default(now())
+
+  @@index([routerId])
+  @@index([eventType])
+  @@index([timestamp])
+}
+
+// ============================================================================
+// TELEGRAM INTEGRATION
+// ============================================================================
+
+model TelegramIntegration {
+  id                    String    @id @default(cuid())
+  name                  String    @unique
+  botTokenHash          String
+  chatId                String
+  webhookMode           Boolean   @default(false)
+  webhookUrl            String?
+  pollingMode           Boolean   @default(true)
+  enabled               Boolean   @default(false)
+  testMessageSent       Boolean   @default(false)
+  lastTest              DateTime?
+  status                String    @default("DISCONNECTED") // CONNECTED, DISCONNECTED, AUTH_FAILED, ERROR
+  lastError             String?
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+
+  events                TelegramEvent[]
+
+  @@index([enabled])
+  @@index([status])
+}
+
+model TelegramEvent {
+  id                    String    @id @default(cuid())
+  telegramId            String
+  telegram              TelegramIntegration @relation(fields: [telegramId], references: [id], onDelete: Cascade)
+  messageId             String?
+  eventType             String    // HEARTBEAT, ALERT, TEST, ERROR
+  payload               Json?
+  status                String    // SUCCESS, FAILED, PENDING_RETRY
+  error                 String?
+  sentAt                DateTime?
+  deliveredAt           DateTime?
+  timestamp             DateTime  @default(now())
+
+  @@index([telegramId])
+  @@index([eventType])
+  @@index([status])
+  @@index([timestamp])
+}
+
+// ============================================================================
+// ALERTS & ALERTING
+// ============================================================================
+
+model AlertRule {
+  id                    String    @id @default(cuid())
+  name                  String
+  description           String?
+  enabled               Boolean   @default(true)
+  condition             String    // gateway unavailable, latency > 100ms, packet_loss > 5%, etc
+  threshold             String?
+  severity              String    @default("INFO") // CRITICAL, HIGH, MEDIUM, LOW, INFO
+  actions               Json?     // what to do when alert triggers
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+
+  alerts                Alert[]
+
+  @@index([enabled])
+  @@index([severity])
+}
+
+model Alert {
+  id                    String    @id @default(cuid())
+  ruleId                String
+  rule                  AlertRule @relation(fields: [ruleId], references: [id], onDelete: Cascade)
+  severity              String    @default("INFO")
+  source                String    // device, router, network, agent, etc
+  sourceId              String?
+  event                 String
+  status                String    @default("ACTIVE") // ACTIVE, RESOLVED, ACKNOWLEDGED
+  acknowledgedBy        String?
+  acknowledgedByUser    User?     @relation("AcknowledgedBy", fields: [acknowledgedBy], references: [id])
+  acknowledgedAt        DateTime?
+  metadata              Json?
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+  resolvedAt            DateTime?
+
+  @@index([ruleId])
+  @@index([status])
+  @@index([severity])
+  @@index([source])
+  @@index([createdAt])
+}
+
+// ============================================================================
+// URL INSPECTION
+// ============================================================================
+
+model UrlInspection {
+  id                    String    @id @default(cuid())
+  url                   String
+  status                String    @default("PENDING") // PENDING, SUCCESS, FAILED, BLOCKED
+  httpStatus            Int?
+  contentType           String?
+  contentLength         Int?
+  headers               Json?
+  htmlSnippet           String?   // First 2000 chars
+  error                 String?
+  scannedAt             DateTime?
+  createdAt             DateTime  @default(now())
+
+  assets                UrlAsset[]
+  events                UrlEvent[]
+
+  @@index([url])
+  @@index([status])
+  @@index([scannedAt])
+}
+
+model UrlAsset {
+  id                    String    @id @default(cuid())
+  inspectionId          String
+  inspection            UrlInspection @relation(fields: [inspectionId], references: [id], onDelete: Cascade)
+  type                  String    // LINK, SCRIPT, STYLESHEET, IMAGE, FORM, META
+  url                   String?
+  text                  String?
+  details               Json?
+
+  @@index([inspectionId])
+  @@index([type])
+}
+
+model UrlEvent {
+  id                    String    @id @default(cuid())
+  inspectionId          String
+  inspection            UrlInspection @relation(fields: [inspectionId], references: [id], onDelete: Cascade)
+  eventType             String    // FETCHED, PARSED, BLOCKED, ERROR
+  details               Json?
+  timestamp             DateTime  @default(now())
+
+  @@index([inspectionId])
+  @@index([eventType])
+  @@index([timestamp])
+}
+
+// ============================================================================
+// SECURITY & ANALYSIS
+// ============================================================================
+
+model SecurityScan {
+  id                    String    @id @default(cuid())
+  name                  String
+  type                  String    // APK, MANIFEST, PERMISSION, IOC, YARA, BEHAVIOR
+  target                String    // file path, package name, etc
+  status                String    @default("PENDING") // PENDING, IN_PROGRESS, COMPLETED, FAILED
+  resultSummary         Json?
+  findings              SecurityFinding[]
+  startedAt             DateTime?
+  completedAt           DateTime?
+  createdAt             DateTime  @default(now())
+
+  @@index([type])
+  @@index([status])
+  @@index([createdAt])
+}
+
+model SecurityFinding {
+  id                    String    @id @default(cuid())
+  scanId                String
+  scan                  SecurityScan @relation(fields: [scanId], references: [id], onDelete: Cascade)
+  category              String    // PERMISSION, BEHAVIOR, IOC, MALWARE, VULNERABILITY
+  severity              String    // CRITICAL, HIGH, MEDIUM, LOW, INFO
+  title                 String
+  description           String?
+  recommendation        String?
+  metadata              Json?
+  timestamp             DateTime  @default(now())
+
+  @@index([scanId])
+  @@index([category])
+  @@index([severity])
+  @@index([timestamp])
+}
+
+model IoC {
+  id                    String    @id @default(cuid())
+  type                  String    // IP, DOMAIN, URL, HASH, EMAIL
+  value                 String    @unique
+  source                String?
+  threatLevel           String    @default("UNKNOWN") // CRITICAL, HIGH, MEDIUM, LOW, UNKNOWN
+  firstSeen             DateTime  @default(now())
+  lastSeen              DateTime  @default(now())
+  metadata              Json?
+
+  @@index([type])
+  @@index([value])
+  @@index([threatLevel])
+}
+
+model YaraRule {
+  id                    String    @id @default(cuid())
+  name                  String
+  rule                  String    @db.Text
+  enabled               Boolean   @default(true)
+  source                String?
+  description           String?
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+
+  @@index([enabled])
+  @@index([name])
+}
+
+// ============================================================================
+// COLLECTORS & SYSTEM
+// ============================================================================
+
+model Collector {
+  id                    String    @id @default(cuid())
+  name                  String
+  type                  String    // ROUTER, NETWORK, DNS, LATENCY, ADB, AGENT, SECURITY, TELEGRAM
+  enabled               Boolean   @default(true)
+  configuration         Json?
+  pollingInterval       Int       @default(30)
+  lastRun               DateTime?
+  lastError             String?
+  status                String    @default("UNKNOWN") // RUNNING, IDLE, ERROR, DISABLED
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+
+  runs                  CollectorRun[]
+
+  @@unique([name, type])
+  @@index([type])
+  @@index([enabled])
+  @@index([status])
+}
+
+model CollectorRun {
+  id                    String    @id @default(cuid())
+  collectorId           String
+  collector             Collector @relation(fields: [collectorId], references: [id], onDelete: Cascade)
+  status                String    // RUNNING, SUCCESS, FAILED, TIMEOUT
+  recordsProcessed      Int       @default(0)
+  recordsSkipped        Int       @default(0)
+  error                 String?
+  duration              Int?      // milliseconds
+  startedAt             DateTime  @default(now())
+  completedAt           DateTime?
+
+  @@index([collectorId])
+  @@index([status])
+  @@index([startedAt])
+}
+
+model SystemSetting {
+  id                    String    @id @default(cuid())
+  key                   String    @unique
+  value                 String
+  description           String?
+  category              String?   // DATABASE, SECURITY, NETWORK, FEATURES
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+
+  @@index([key])
+  @@index([category])
+}
+
+model FeatureFlag {
+  id                    String    @id @default(cuid())
+  name                  String    @unique
+  enabled               Boolean   @default(false)
+  description           String?
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+
+  @@index([enabled])
+}
+
+// ============================================================================
+// INTEGRATION & CREDENTIALS (Secure Storage)
+// ============================================================================
+
+model SecretStore {
+  id                    String    @id @default(cuid())
+  key                   String    @unique
+  encryptedValue        String
+  type                  String    // ROUTER_CREDENTIAL, TELEGRAM_TOKEN, API_KEY, DATABASE_PASSWORD
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+
+  @@index([type])
+  @@index([key])
+}

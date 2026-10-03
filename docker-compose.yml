@@ -1,0 +1,22 @@
+version: '3.9'
+services:
+  app:
+    build: .
+    ports:
+      - '3000:3000'
+    env_file:
+      - .env.local
+    depends_on:
+      - postgres
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: my_admin
+      POSTGRES_USER: my_admin
+      POSTGRES_PASSWORD: my_admin
+    ports:
+      - '5432:5432'
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+volumes:
+  pgdata:

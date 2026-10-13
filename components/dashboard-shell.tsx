@@ -5,7 +5,7 @@ const systemCards = [
   { title: 'Security posture', value: 'UNAVAILABLE FROM SOURCE', meta: 'Threat intel status', icon: ShieldCheck, tone: 'emerald' },
   { title: 'Gateway', value: 'UNAVAILABLE FROM SOURCE', meta: 'Primary network route', icon: Wifi, tone: 'blue' },
   { title: 'ADB devices', value: 'ADB SOURCE UNAVAILABLE', meta: 'Authorized mobile inventory', icon: Smartphone, tone: 'violet' },
-  { title: 'Agents', value: 'NO ACTIVE AGENTS', meta: 'Connected agents', icon: Cpu, tone: 'amber' },
+  { title: 'Agents', value: 'UNAVAILABLE FROM SOURCE', meta: 'Connected agents', icon: Cpu, tone: 'amber' },
 ];
 
 const nav = [
@@ -21,7 +21,7 @@ const nav = [
 function StatusPill({ label }: { label: string }) {
   return (
     <span className="inline-flex items-center gap-2 rounded-full border border-slate-700 bg-slate-900/60 px-2.5 py-1 text-[10px] uppercase tracking-[0.2em] text-slate-300">
-      <span className="h-2 w-2 rounded-full bg-emerald-400" />
+      <span className="h-2 w-2 rounded-full bg-amber-400" />
       {label}
     </span>
   );
@@ -63,8 +63,8 @@ export function DashboardShell() {
               <span className="text-sm font-medium">System posture</span>
             </div>
             <div className="space-y-2 text-xs text-slate-400">
-              <div className="flex items-center justify-between"><span>Auth</span><span className="text-emerald-400">PROTECTED</span></div>
-              <div className="flex items-center justify-between"><span>Data sources</span><span className="text-violet-400">SCANNING</span></div>
+              <div className="flex items-center justify-between"><span>Auth</span><span className="text-amber-400">NOT VERIFIED</span></div>
+              <div className="flex items-center justify-between"><span>Data sources</span><span className="text-amber-400">NOT CONNECTED</span></div>
               <div className="flex items-center justify-between"><span>Collector health</span><span className="text-amber-400">PENDING</span></div>
             </div>
           </div>
@@ -78,7 +78,7 @@ export function DashboardShell() {
             </div>
 
             <div className="flex flex-wrap items-center gap-3">
-              <StatusPill label="System secure" />
+              <StatusPill label="Health checks required" />
               <div className="flex items-center gap-2 rounded-xl border border-slate-700 bg-slate-950/80 px-3 py-2 text-sm text-slate-300">
                 <Search className="h-4 w-4 text-sky-300" />
                 Search command / system
@@ -118,11 +118,11 @@ export function DashboardShell() {
               </div>
 
               <div className="grid grid-cols-3 gap-3 md:grid-cols-6">
-                {['Gateway', 'Router', 'ADB', 'Telegram', 'Agents', 'Security'].map((item, idx) => (
+                {['Gateway', 'Router', 'ADB', 'Telegram', 'Agents', 'Security'].map((item) => (
                   <div key={item} className="rounded-xl border border-slate-800 bg-slate-950/60 p-3 text-center">
-                    <div className={`mx-auto mb-2 h-2.5 w-2.5 rounded-full ${idx % 2 === 0 ? 'bg-amber-400' : 'bg-slate-500'}`} />
+                    <div className="mx-auto mb-2 h-2.5 w-2.5 rounded-full bg-slate-500" />
                     <div className="text-xs text-slate-300">{item}</div>
-                    <div className="mt-2 text-[10px] uppercase tracking-[0.2em] text-slate-500">{idx % 2 === 0 ? 'DEGRADED' : 'UNAVAILABLE'}</div>
+                    <div className="mt-2 text-[10px] uppercase tracking-[0.2em] text-slate-500">UNAVAILABLE FROM SOURCE</div>
                   </div>
                 ))}
               </div>

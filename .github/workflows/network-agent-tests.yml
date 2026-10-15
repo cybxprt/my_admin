@@ -24,3 +24,21 @@ jobs:
         with:
           python-version: "3.12"
       - run: python -m unittest tests/test_tenda_monitor.py -v
+
+  app-type-check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+      - run: npm install
+        env:
+          DATABASE_URL: postgresql://user:password@localhost:5432/my_admin
+      - run: npx prisma generate
+        env:
+          DATABASE_URL: postgresql://user:password@localhost:5432/my_admin
+      - run: npm run type-check
+        env:
+          DATABASE_URL: postgresql://user:password@localhost:5432/my_admin

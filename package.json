@@ -53,6 +53,5 @@
     "eslint-config-next": "^14.0.4",
     "postcss": "^8.4.32",
     "autoprefixer": "^10.4.16",
-    "typescript-eslint": "^6.15.0"
   }
 }

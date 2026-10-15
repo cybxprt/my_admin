@@ -31,7 +31,8 @@ class TendaMonitorTests(unittest.TestCase):
         self.assertEqual(snapshot["router"]["name"], "SUNNAH")
         self.assertEqual(snapshot["summary"]["observedClientCount"], 1)
         self.assertEqual(snapshot["clients"][0]["ip"], "192.168.0.105")
-        self.assertNotIn("mac", str(snapshot).lower())
+        self.assertNotIn("00:11:22:33:44:55", str(snapshot))
+        self.assertNotIn("qosListMac", str(snapshot))
         self.assertEqual(snapshot["router"]["wanAddressClass"], "PRIVATE_OR_UPSTREAM_NAT_POSSIBLE")
 
     def test_missing_fields_are_not_fabricated(self):

@@ -32,7 +32,6 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: "20"
-          cache: npm
       - run: npm install
         env:
           DATABASE_URL: postgresql://user:password@localhost:5432/my_admin

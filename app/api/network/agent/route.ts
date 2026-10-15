@@ -91,6 +91,14 @@ export async function POST(request: NextRequest) {
 
   const checkedAt = new Date(snapshot.observedAt);
   try {
+    const previousRouter = await prisma.router.findUnique({
+      where: { name: snapshot.router.name },
+      select: { id: true, status: true },
+    });
+    if (snapshot.clients.some((client) => !isPrivateIpv4(client.ip))) {
+      return NextResponse.json({ success: false, error: 'Client records must use private IPv4 addresses' }, { status: 400 });
+    }
+
     const router = await prisma.router.upsert({
       where: { name: snapshot.router.name },
       create: {
@@ -133,19 +141,21 @@ export async function POST(request: NextRequest) {
         routerId: router.id, metric, value, status, error, timestamp: checkedAt,
       })),
     });
-    await prisma.routerEvent.create({
-      data: {
-        routerId: router.id,
-        eventType: 'CONNECTED',
-        timestamp: checkedAt,
-        details: {
-          source: snapshot.source,
-          observedClientCount: snapshot.summary.observedClientCount,
-          reportedOnlineCount: snapshot.summary.reportedOnlineCount,
-          provenance: snapshot.provenance,
+    if (!previousRouter || previousRouter.status !== 'CONNECTED') {
+      await prisma.routerEvent.create({
+        data: {
+          routerId: router.id,
+          eventType: 'CONNECTED',
+          timestamp: checkedAt,
+          details: {
+            source: snapshot.source,
+            observedClientCount: snapshot.summary.observedClientCount,
+            reportedOnlineCount: snapshot.summary.reportedOnlineCount,
+            provenance: snapshot.provenance,
+          },
         },
-      },
-    });
+      });
+    }
 
     return NextResponse.json({
       success: true,

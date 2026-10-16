@@ -1,6 +1,5 @@
-import "./network-center/network-center.css";
-import { NetworkCenter } from "@/components/network-center";
+import { DashboardShell } from "@/components/dashboard-shell";
 
 export default function HomePage() {
-  return <NetworkCenter />;
+  return <DashboardShell />;
 }

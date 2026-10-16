@@ -51,3 +51,16 @@ This repository is structured as a Next.js + TypeScript + Tailwind application w
 - Security headers are applied via middleware
 - Authorization and permissions are expected to be enforced server-side
 - Auditability is represented through the Prisma schema
+
+
+## SunnahOS Universal Network Center
+
+The default dashboard now includes a searchable network-tool catalog, public DNS A/AAAA lookup, a browser-local IPv4/CIDR calculator, and a searchable TCP/UDP service reference. The interface labels each module as hosted, local-agent-required, or reference-only so it does not imply unavailable device telemetry is live.
+
+- Dashboard: `/`
+- Dedicated route: `/network-center`
+- Service health: `/api/network/health`
+- DNS lookup: `/api/network/dns?domain=example.com`
+- Architecture and deployment notes: [docs/NETWORK_CENTER.md](docs/NETWORK_CENTER.md)
+
+Device-level features such as LAN discovery, packet capture, ping/traceroute and Wi-Fi diagnostics require an authorized local Termux/Linux agent; they are not implemented by the hosted dashboard alone.

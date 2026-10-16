@@ -8,7 +8,6 @@ export const metadata: Metadata = {
   },
   description: "A unified workspace for DNS, IP addressing, network tools, infrastructure references and authorized defensive operations.",
   applicationName: "SunnahOS Network Center",
-  metadataBase: new URL("https://sunnahos-network-center.vercel.app"),
   robots: {
     index: true,
     follow: true,

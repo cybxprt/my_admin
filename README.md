@@ -57,8 +57,8 @@ This repository is structured as a Next.js + TypeScript + Tailwind application w
 
 The default dashboard now includes a searchable network-tool catalog, public DNS A/AAAA lookup, a browser-local IPv4/CIDR calculator, and a searchable TCP/UDP service reference. The interface labels each module as hosted, local-agent-required, or reference-only so it does not imply unavailable device telemetry is live.
 
-- Dashboard: `/`
-- Dedicated route: `/network-center`
+- Existing admin dashboard: `/`
+- SunnahOS Network Center: `/network-center`
 - Service health: `/api/network/health`
 - DNS lookup: `/api/network/dns?domain=example.com`
 - Architecture and deployment notes: [docs/NETWORK_CENTER.md](docs/NETWORK_CENTER.md)

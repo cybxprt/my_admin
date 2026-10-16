@@ -7,7 +7,6 @@ import {
   RefreshCw, Router, Search, Server, Shield, Signal, Terminal, Wifi,
   XCircle, Zap,
 } from "lucide-react";
-import "./network-center.css";
 
 type Tool = { name: string; category: string; description: string; mode: "hosted" | "agent" | "reference"; command?: string };
 const tools: Tool[] = [

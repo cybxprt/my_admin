@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import {
   Activity, ArrowDownUp, BadgeCheck, Cable, CheckCircle2, ChevronRight,
-  CircleHelp, Cloud, Copy, Cpu, Database, Globe2, LockKeyhole, Radar,
+  HelpCircle, Cloud, Copy, Cpu, Database, Globe2, LockKeyhole, Radar,
   RefreshCw, Router, Search, Server, Shield, Signal, Terminal, Wifi,
   XCircle, Zap,
 } from "lucide-react";
@@ -158,7 +158,7 @@ export function NetworkCenter() {
 
         <section id="ports" className="nc-panel nc-port-panel"><div className="nc-section-head"><div className="nc-panel-title"><span className="nc-panel-icon"><ArrowDownUp size={18} /></span><div><h2>Port & protocol registry</h2><p>Common service assignments — not a scan of your network</p></div></div><div className="nc-search nc-port-search"><Search size={16} /><input aria-label="Search ports" value={portQuery} onChange={e=>setPortQuery(e.target.value)} placeholder="Search port / service" /></div></div><div className="nc-table-wrap"><table className="nc-table"><thead><tr><th>Port</th><th>Service</th><th>Transport</th></tr></thead><tbody>{visiblePorts.map(p=><tr key={p[0]}><td><code>{p[0]}</code></td><td>{p[1]}</td><td><span className="nc-protocol">{p[2]}</span></td></tr>)}</tbody></table></div></section>
 
-        <section id="security" className="nc-security"><div className="nc-security-mark"><LockKeyhole size={22} /></div><div><h2>Security & authorization by design</h2><p>Active discovery, packet capture, vulnerability checks, remote sessions and device telemetry must run only against systems you own or are explicitly authorized to assess. These operations are not simulated by the hosted dashboard.</p><div className="nc-security-tags"><span><BadgeCheck size={14} /> Scope-first</span><span><Database size={14} /> Source-backed telemetry</span><span><CircleHelp size={14} /> Missing data marked unavailable</span></div></div></section>
+        <section id="security" className="nc-security"><div className="nc-security-mark"><LockKeyhole size={22} /></div><div><h2>Security & authorization by design</h2><p>Active discovery, packet capture, vulnerability checks, remote sessions and device telemetry must run only against systems you own or are explicitly authorized to assess. These operations are not simulated by the hosted dashboard.</p><div className="nc-security-tags"><span><BadgeCheck size={14} /> Scope-first</span><span><Database size={14} /> Source-backed telemetry</span><span><HelpCircle size={14} /> Missing data marked unavailable</span></div></div></section>
         <footer className="nc-footer"><span>© {new Date().getFullYear()} SunnahOS Network Center</span><span><span className="nc-footer-dot" /> Hosted dashboard · Local agent optional</span><a href="https://github.com/cybxprt/my_admin" target="_blank" rel="noreferrer">Source repository <ChevronRight size={13} /></a></footer>
         {copyMessage && <div className="nc-toast" role="status">{copyMessage}</div>}
       </section>
